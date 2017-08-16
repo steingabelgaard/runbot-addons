@@ -144,13 +144,6 @@ class RunbotBuild(models.Model):
         ] + pr_cmd_env + wl_cmd_env
         cmd.extend(['--name=' + build.docker_container, '-t',
                     build.docker_image])
-        logdb = cr.dbname
-        if config['db_host'] and not travis_branch.startswith('7.0'):
-            logdb = 'postgres://%s:%s@%s/%s' % (
-                config['db_user'], config['db_password'],
-                config['db_host'], cr.dbname,
-            )
-        cmd += ['-e', 'SERVER_OPTIONS="--log-db=%s"' % logdb]
         return self.spawn(cmd, lock_path, log_path)
 
     def job_21_coverage(self, cr, uid, build, lock_path, log_path):
