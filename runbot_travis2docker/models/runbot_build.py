@@ -275,6 +275,17 @@ class RunbotBuild(models.Model):
             if self.branch_id.repo_id.token:
                 wl_cmd_env.extend([
                     '-e', 'GITHUB_TOKEN=%s' % self.branch_id.repo_id.token])
+        gh_cmd_env = []
+        if self.branch_id.repo_id.token:
+            github_token = self.branch_id.repo_id.token
+        else:
+            github_token = self.env['ir.config_parameter'].get_param('runbot.github_token', False),
+        if github_token:
+            gh_cmd_env.extend([
+                    '-e', 'GITHUB_TOKEN=%s' % github_token,
+                    '-e', 'GITHUB_USER=%s' % self.env['ir.config_parameter'].get_param('runbot.github_user', False),
+                    '-e', 'GITHUB_EMAIL=%s' % self.env['ir.config_parameter'].get_param('runbot.github_email', False)
+                    ])
         cmd = [
             'docker', 'run',
             '-e', 'INSTANCE_ALIVE=1',
@@ -287,7 +298,7 @@ class RunbotBuild(models.Model):
                 not self.repo_id.travis2docker_test_disable),
             '-p', '%d:%d' % (self.port, 8069),
             '-p', '%d:%d' % (self.port + 1, 22),
-        ] + pr_cmd_env + wl_cmd_env
+        ] + pr_cmd_env + wl_cmd_env + gh_cmd_env
         cmd.extend(['--name=' + self.docker_container, '-t',
                     self.docker_image])
         logdb = self.env.cr.dbname
