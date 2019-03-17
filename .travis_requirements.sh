@@ -5,7 +5,7 @@ set -v
 export DEPS=${HOME}/dependencies
 # odoo-extra break compatibility because change name of many methods
 # TODO: Test new changes and remove this freeze sha
-(cd $DEPS/odoo-extra; git reset --hard 0c41e17^)
+(cd $DEPS/odoo-extra; git fetch --unshallow; git reset --hard 0c41e17^)
 # odoo-extra has a bunch of v9 modules which aren't compatible, remove them
 (cd $DEPS/odoo-extra; rm -rf $(ls | grep -v runbot$))
 
@@ -22,3 +22,6 @@ sed -i "s/'interval_number'>1</'interval_number'>60</g" $DEPS/odoo-extra/runbot/
 
 # Disabling test_crawl (native runbot fail)
 find ${HOME} -name __init__.py -exec sed -i  "/import test_crawl/d" {} \;
+
+# Download docker image required
+if [[ "${TESTS}" == "1"  ]]; then docker pull vauxoo/odoo-80-image-shippable-auto; fi

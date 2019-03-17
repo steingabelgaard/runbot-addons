@@ -4,6 +4,7 @@
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl.html).
 
 import re
+import os
 
 import requests
 import subprocess
@@ -33,6 +34,31 @@ class RunbotBranch(models.Model):
                     dict(match.groupdict(), branch=branch['branch_name']))
         branch.name_weblate = name
 
+    @tools.ormcache('ssh')
+    def _ssh_keyscan(self, ssh):
+        """This function execute the command 'ssh-keysan' to avoid the question
+        when the command git fetch is excecuted.
+        The question is like to:
+            'Are you sure you want to continue connecting (yes/no)?'"""
+        cmd = ['ssh-keyscan', '-p']
+        match = re.search(
+            r'(ssh\:\/\/\w+@(?P<host>[a-zA-Z0-9_.-]+))(:{0,1})'
+            r'(?P<port>(\d+))?', ssh)
+        if not match:
+            return False
+        data = match.groupdict()
+        cmd.append(data['port'] or '22')
+        cmd.append(data['host'])
+        with open(os.path.expanduser('~/.ssh/known_hosts'), 'a+') as hosts:
+            new_keys = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                                        stderr=subprocess.PIPE)
+            for key in new_keys.stdout:
+                if [line for line in hosts if (line.strip('\n') ==
+                                               key.strip('\n'))]:
+                    continue
+                hosts.write(key + '\n')
+        return True
+
     @tools.ormcache('url', 'token')
     def get_weblate_projects(self, url, token):
         """Find all projects and components that are on weblate url.
@@ -56,11 +82,27 @@ class RunbotBranch(models.Model):
                 break
             page += 1
         for project in items:
-            response = session.get('%s/projects/%s/components'
+            components = []
+            page = 1
+            while True:
+                response = session.get('%s/projects/%s/components/?page=%s'
+                                       % (url, project['slug'], page))
+                response.raise_for_status()
+                data = response.json()
+                components.extend(data['results'] or [])
+                if not data['next']:
+                    break
+                page += 1
+            project['components'] = components
+            response = session.get('%s/projects/%s/repository'
                                    % (url, project['slug']))
             response.raise_for_status()
             data = response.json()
-            project['components'] = data['results']
+            if data['needs_commit']:
+                response = session.post('%s/projects/%s/repository'
+                                        % (url, project['slug']),
+                                        {'operation': 'commit'})
+                response.raise_for_status()
             projects.append(project)
         return projects
 
@@ -68,7 +110,8 @@ class RunbotBranch(models.Model):
     def cron_weblate(self):
         for branch in self.search([('uses_weblate', '=', True)]):
             if (not branch.repo_id.weblate_token or
-                    not branch.repo_id.weblate_url):
+                    not branch.repo_id.weblate_url or
+                    not branch.repo_id.weblate_ssh):
                 continue
             cmd = ['git', '--git-dir=%s' % branch.repo_id.path]
             projects = self.get_weblate_projects(branch.repo_id.weblate_url,
@@ -88,15 +131,21 @@ class RunbotBranch(models.Model):
                          ('uses_weblate', '=', True)])
                     if has_build:
                         continue
-                    remote = 'wl-%s' % project['slug']
+                    component = [item for item in project['components']
+                                 if item['git_export']]
+                    if len(component) != 1:
+                        continue
+                    component = component[0]
+                    remote = 'wl-%s-%s' % (project['slug'], component['slug'])
                     url_repo = '/'.join([
-                        branch.repo_id.weblate_url.replace('api', 'git'),
-                        project['slug'], component['slug']])
+                        branch.repo_id.weblate_ssh, project['slug'],
+                        component['slug']])
                     try:
                         subprocess.check_output(cmd + ['remote', 'add', remote,
                                                        url_repo])
                     except subprocess.CalledProcessError:
                         pass
+                    self._ssh_keyscan(branch.repo_id.weblate_ssh)
                     subprocess.check_output(cmd + ['fetch', remote])
                     diff = subprocess.check_output(
                         cmd + ['diff',

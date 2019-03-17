@@ -168,6 +168,9 @@ class RunbotBuild(models.Model):
                 branch_short_name, '--root-path=' + t2d_path,
                 '--exclude-after-success',
                 '--docker-image=%s' % build.repo_id.travis2docker_image,
+                # Avoid corruption of postgresql
+                '--runs-at-the-end-script=pg_isready -q && '
+                '/etc/init.d/postgresql stop'
             ]
             try:
                 path_scripts = t2d()
@@ -243,10 +246,11 @@ class RunbotBuild(models.Model):
         Use this in child modules to append to the command sent to Odoo.
         """
         self.ensure_one()
+
         pr_cmd_env = [
-            '-e', 'TRAVIS_PULL_REQUEST=%s' %
+            '-e', 'TRAVIS_PULL_REQUEST=' +
             self.branch_id.branch_name,
-            '-e', 'CI_PULL_REQUEST=%s' % self.branch_id.branch_name,
+            '-e', 'CI_PULL_REQUEST=' + self.branch_id.branch_name,
         ] if 'refs/pull/' in self.branch_id.name else [
             '-e', 'TRAVIS_PULL_REQUEST=false',
         ]
@@ -260,8 +264,9 @@ class RunbotBuild(models.Model):
                 '-e', ('WEBLATE_TOKEN=%s' %
                        self.branch_id.repo_id.weblate_token),
                 '-e', ('WEBLATE_HOST=%s' %
-                       self.branch_id.repo_id.weblate_url)
-            ])
+                       self.branch_id.repo_id.weblate_url),
+                '-e', ('WEBLATE_SSH=%s' %
+                       self.branch_id.repo_id.weblate_ssh)])
             if self.branch_id.repo_id.weblate_languages:
                 wl_cmd_env.extend([
                     '-e', 'LANG_ALLOWED=%s' %
@@ -273,8 +278,8 @@ class RunbotBuild(models.Model):
         cmd = [
             'docker', 'run',
             '-e', 'INSTANCE_ALIVE=1',
-            '-e', 'TRAVIS_BRANCH=%s' % travis_branch,
-            '-e', 'TRAVIS_COMMIT=%s' % self.name,
+            '-e', 'TRAVIS_BRANCH=' + travis_branch,
+            '-e', 'TRAVIS_COMMIT=' + self.name,
             '-e', 'RUNBOT=1',
             '-e', 'UNBUFFER=0',
             '-e', 'START_SSH=1',
@@ -282,16 +287,17 @@ class RunbotBuild(models.Model):
                 not self.repo_id.travis2docker_test_disable),
             '-p', '%d:%d' % (self.port, 8069),
             '-p', '%d:%d' % (self.port + 1, 22),
-        ] + pr_cmd_env + wl_cmd_env + self._get_run_extra()
+        ] + pr_cmd_env + wl_cmd_env
+        cmd.extend(['--name=' + self.docker_container, '-t',
+                    self.docker_image])
         logdb = self.env.cr.dbname
         if config['db_host'] and not travis_branch.startswith('7.0'):
             logdb = 'postgres://%s:%s@%s/%s' % (
                 config['db_user'], config['db_password'],
                 config['db_host'], self.env.cr.dbname,
             )
-        cmd += ['-e', 'SERVER_OPTIONS=--log-db=%s' % logdb]
-        cmd.extend(['--name=%s' % self.docker_container, '-t',
-                    self.docker_image])
+        cmd += ['-e', 'SERVER_OPTIONS="--log-db=%s"' % logdb]
+
         return cmd
 
     @api.multi
