@@ -310,6 +310,7 @@ class RunbotBuild(models.Model):
             )
         cmd += ['-e', 'SERVER_OPTIONS="--log-db=%s"' % logdb]
 
+        _logger.info('RUN CMD: %s', cmd)
         return cmd
 
     @api.multi
