@@ -175,6 +175,7 @@ class RunbotBuild(models.Model):
             try:
                 path_scripts = t2d()
             except BaseException:  # TODO: Add custom exception to t2d
+                _logger.exception('Travis2Docker failed')
                 path_scripts = []
             for path_script in path_scripts:
                 df_content = open(os.path.join(
