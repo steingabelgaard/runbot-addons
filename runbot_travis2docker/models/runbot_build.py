@@ -310,6 +310,7 @@ class RunbotBuild(models.Model):
             )
         cmd += ['-e', 'SERVER_OPTIONS="--log-db=%s"' % logdb]
 
+        cmd += self._get_run_extra()
         _logger.info('RUN CMD: %s', cmd)
         return cmd
 
