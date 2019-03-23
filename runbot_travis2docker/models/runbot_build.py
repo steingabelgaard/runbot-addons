@@ -90,13 +90,12 @@ class RunbotBuild(models.Model):
         else:
             github_token = self.env['ir.config_parameter'].get_param('runbot.github_token', False),
 
-                    ])
         cmd = [
             'docker', 'build',
             "--no-cache", '--pull',
             '--build-arg', 'GITHUB_TOKEN=%s' % github_token,
             '--build-arg', 'GITHUB_USER=%s' % self.env['ir.config_parameter'].get_param('runbot.github_user', False),
-            '--build-arg', 'GITHUB_EMAIL=%s' % self.env['ir.config_parameter'].get_param('runbot.github_email', False)
+            '--build-arg', 'GITHUB_EMAIL=%s' % self.env['ir.config_parameter'].get_param('runbot.github_email', False),
             "-t", build.docker_image,
             build.dockerfile_path,
         ]
