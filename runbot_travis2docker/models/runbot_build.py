@@ -85,17 +85,17 @@ class RunbotBuild(models.Model):
             _logger.info('docker build skipping job_10_test_base')
             return MAGIC_PID_RUN_NEXT_JOB
         
-        if self.branch_id.repo_id.token:
-            github_token = self.branch_id.repo_id.token
+        if build.branch_id.repo_id.token:
+            github_token = build.branch_id.repo_id.token
         else:
-            github_token = self.env['ir.config_parameter'].get_param('runbot.github_token', False),
+            github_token = self.pool.get('ir.config_parameter').get_param(cr, uid, 'runbot.github_token', False),
 
         cmd = [
             'docker', 'build',
             "--no-cache", '--pull',
             '--build-arg', 'GITHUB_TOKEN=%s' % github_token,
-            '--build-arg', 'GITHUB_USER=%s' % self.env['ir.config_parameter'].get_param('runbot.github_user', False),
-            '--build-arg', 'GITHUB_EMAIL=%s' % self.env['ir.config_parameter'].get_param('runbot.github_email', False),
+            '--build-arg', 'GITHUB_USER=%s' % self.pool.get('ir.config_parameter').get_param(cr, uid, 'runbot.github_user', False),
+            '--build-arg', 'GITHUB_EMAIL=%s' % self.pool.get('ir.config_parameter').get_param(cr, uid, 'runbot.github_email', False),
             "-t", build.docker_image,
             build.dockerfile_path,
         ]
