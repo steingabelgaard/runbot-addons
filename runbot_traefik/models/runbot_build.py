@@ -36,7 +36,7 @@ class RunbotBuild(models.Model):
                 '-l', 'traefik.frontend.passHostHeader=true',
                 '-l', 'traefik.port=8069',
                 '-l', 'traefik.docker.network=%s' % self.env['ir.config_parameter'].get_param('runbot.docker_trafik_network', 'docker-runbot_default'),
-                '--network %s' % self.env['ir.config_parameter'].get_param('runbot.docker_trafik_network', 'docker-runbot_default'),
+                '--network=%s' % self.env['ir.config_parameter'].get_param('runbot.docker_trafik_network', 'docker-runbot_default'),
             ]
         _logger.info('_get_run_extra: %s', cmd)
         return cmd
