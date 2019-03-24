@@ -312,7 +312,7 @@ class RunbotBuild(models.Model):
         ] + pr_cmd_env + wl_cmd_env + gh_cmd_env
 
         if 'bitbucket' in build.branch_id.repo_id.name:
-            cmd.extend(['-e', 'BITBUCKET_REPO=%s' % build.branch_id.repo_id.name]
+            cmd.extend(['-e', 'BITBUCKET_REPO=%s' % build.branch_id.repo_id.name])
              
         cmd.extend(['--name=' + self.docker_container, '-t',
                     self.docker_image])
