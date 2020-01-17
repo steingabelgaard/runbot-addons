@@ -11,6 +11,7 @@
     'author': 'Stein & Gabelgaard ApS',
     'website': 'www.steingabelgaard.dk',
     'depends': [
+        'runbot'
     ],
     'data': [
     ],
