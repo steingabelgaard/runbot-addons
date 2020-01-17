@@ -88,8 +88,8 @@ class RunbotBuild(models.Model):
         if build.branch_id.repo_id.token:
             github_token = build.branch_id.repo_id.token
         else:
-            github_token = self.pool.get('ir.config_parameter').get_param(cr, uid, 'runbot.github_token', False),
-
+            github_token = self.pool.get('ir.config_parameter').get_param(cr, uid, 'runbot.github_token', False)
+            
         cmd = [
             'docker', 'build',
             "--no-cache", '--pull',
@@ -310,6 +310,10 @@ class RunbotBuild(models.Model):
             '-p', '%d:%d' % (self.port, 8069),
             '-p', '%d:%d' % (self.port + 1, 22),
         ] + pr_cmd_env + wl_cmd_env + gh_cmd_env
+
+        if 'bitbucket' in self.branch_id.repo_id.name:
+            cmd.extend(['-e', 'BITBUCKET_REPO=%s' % self.branch_id.repo_id.name])
+             
         cmd.extend(['--name=' + self.docker_container, '-t',
                     self.docker_image])
         logdb = self.env.cr.dbname
