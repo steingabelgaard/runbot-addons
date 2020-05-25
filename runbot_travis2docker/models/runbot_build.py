@@ -160,8 +160,8 @@ class RunbotBuild(models.Model):
                 build.server("test/common.py"), "post_install") or grep(
                     log_all, "Initiating shutdown."):
                 v['result'] = "ok"
-                if grep("test_flake8                 [1;31mFAIL[0;m") or 
-                    grep("test_pylint                 [1;31mFAIL[0;m"):
+                if rfind("test_flake8.*FAIL") or 
+                    rfind("test_pylint.*FAIL"):
                     v['result'] = "warn"
         else:
             v['result'] = "ko"
