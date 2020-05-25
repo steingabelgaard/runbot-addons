@@ -144,12 +144,25 @@ class RunbotBuild(models.Model):
         if grep(log_all, ".modules.loading: Modules loaded."):
             if rfind(log_all, _re_error):
                 v['result'] = "ko"
+                self.pool['ir.logging'].create(cr, uid, {
+                    'build_id': build.id,
+                    'level': 'ERROR',
+                    'type': 'server',
+                    'name': 'odoo.runbot',
+                    'message': message,
+                    'path': 'runbot',
+                    'func': 'test all',
+                    'line': '0',
+                    })
             elif rfind(log_all, _re_warning):
                 v['result'] = "warn"
             elif not grep(
                 build.server("test/common.py"), "post_install") or grep(
                     log_all, "Initiating shutdown."):
                 v['result'] = "ok"
+                if grep("test_flake8                 [1;31mFAIL[0;m") or 
+                    grep("test_pylint                 [1;31mFAIL[0;m"):
+                    v['result'] = "warn"
         else:
             v['result'] = "ko"
         build.write(v)
