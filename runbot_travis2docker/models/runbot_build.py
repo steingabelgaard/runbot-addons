@@ -350,3 +350,29 @@ class RunbotBuild(models.Model):
             list: Additional arguments to add into docker run command.
         """
         return []
+    
+    def github_status(self, cr, uid, ids, context=None):
+        """Notify github of failed/successful builds"""
+        runbot_domain = self.pool['runbot.repo'].domain(cr, uid)
+        for build in self.browse(cr, uid, ids, context=context):
+            desc = "runbot build %s" % (build.dest,)
+            if build.state == 'testing':
+                state = 'pending'
+            elif build.state in ('running', 'done'):
+                state = 'error'
+                if build.result == 'ok':
+                    state = 'success'
+                if build.result == 'ko':
+                    state = 'failure'
+                desc += " (runtime %ss)" % (build.job_time,)
+            else:
+                continue
+            status = {
+                "state": state,
+                "target_url": "http://%s/runbot/build/%s" % (runbot_domain, build.id),
+                "description": desc,
+                "context": "ci/runbot"
+            }
+            _logger.debug("github updating status %s to %s", build.name, state)
+            build.repo_id.adm_notify('https://adm.steingabelgaard.dk/runbot/sync/:type/:owner/:repo/%s/%s' % (build.branch_id.branch_name, state), 
+                                     ignore_errors=True)
