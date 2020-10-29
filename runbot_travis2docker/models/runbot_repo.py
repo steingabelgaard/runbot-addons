@@ -72,20 +72,20 @@ class RunbotRepo(models.Model):
             
     def adm_notify(self, url, payload=None, ignore_errors=False):
         """Return a http request to be sent to adm.steingabelgaard.dk"""
-        for repo in self.browse(cr, uid, ids, context=context):
-            try:
-                match_object = re.search('([^/]+)/([^/]+)/([^/.]+(.git)?)', repo.base)
-                if match_object:
-                    url = url.replace(':owner', match_object.group(2))
-                    url = url.replace(':repo', match_object.group(3))
-                    url = url.replace(':type', 'github' if 'github' in repo.base else 'bitbucket')
-                    session = requests.Session()
-                    session.auth = (repo.token,'x-oauth-basic')
-                    session.headers.update({'Accept': 'application/vnd.github.she-hulk-preview+json'})
-                    if payload:
-                        response = session.post(url, data=simplejson.dumps(payload))
-                    else:
-                        response = session.get(url)
-                    response.raise_for_status()
-                    return True
-
+        pass
+#         for repo in self:
+#             try:
+#                 match_object = re.search('([^/]+)/([^/]+)/([^/.]+(.git)?)', repo.base)
+#                 if match_object:
+#                     url = url.replace(':owner', match_object.group(2))
+#                     url = url.replace(':repo', match_object.group(3))
+#                     url = url.replace(':type', 'github' if 'github' in repo.base else 'bitbucket')
+#                     session = requests.Session()
+#                     session.auth = (repo.token,'x-oauth-basic')
+#                     session.headers.update({'Accept': 'application/vnd.github.she-hulk-preview+json'})
+#                     if payload:
+#                         response = session.post(url, data=simplejson.dumps(payload))
+#                     else:
+#                         response = session.get(url)
+#                     response.raise_for_status()
+#                     return True
