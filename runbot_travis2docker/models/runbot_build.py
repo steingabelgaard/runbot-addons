@@ -154,6 +154,8 @@ class RunbotBuild(models.Model):
 #                     'func': 'test all',
 #                     'line': '0',
 #                     })
+            elif rfind(log_all, "test_server.*FAIL"):
+                v['result'] = "ko"
             elif rfind(log_all, _re_warning):
                 v['result'] = "warn"
             elif not grep(
